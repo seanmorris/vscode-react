@@ -1,70 +1,100 @@
-# Getting Started with Create React App
+# osscode-react
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> A React component for embedding the OSS Code editor via an iframe and Quickbus.
 
-## Available Scripts
+## Installation
 
-In the project directory, you can run:
+```bash
+npm install osscode-react
+```
 
-### `npm start`
+## Usage
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```jsx
+import React from 'react';
+import OssCode from 'osscode-react';
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+function App() {
+  const fsHandlers = {
+    // Provide your custom file system handlers here
+  };
 
-### `npm test`
+  return (
+    <OssCode
+      ossCodeUrl="http://localhost:8080"
+      fsHandlers={fsHandlers}
+    />
+  );
+}
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+export default App;
+```
 
-### `npm run build`
+## API
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+| Prop       | Type   | Description                             |
+| ---------- | ------ | --------------------------------------- |
+| ossCodeUrl | string | Base URL of the OSS Code editor server. |
+| fsHandlers | object | Custom file-system handler callbacks.   |
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## File System Handlers
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The `fsHandlers` prop lets you override the file-system callbacks following the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, `OssCode` uses the following stub handlers:
 
-### `npm run eject`
+```js
+const defaultFsHandlers = {
+  readdir(path: string, opts?: object): string[],
+  async readFile(path: string, opts?: object): number[],
+  analyzePath(path: string): { exists: boolean, isFile?: boolean, isDir?: boolean },
+  writeFile(path: string, data: number[]): void,
+  rename(oldPath: string, newPath: string): void,
+  mkdir(path: string, opts?: { recursive?: boolean }): void,
+  unlink(path: string): void,
+  rmdir(path: string): void,
+  activate(): void
+};
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Handler signatures
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+| Handler      | Signature                                                                  | Description                                                                                 |
+| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `readdir`    | `(path: string, opts?: object) => string[]`                                | Reads a directory and returns an array of entry names.                                      |
+| `readFile`   | `(path: string, opts?: object) => Promise<number[]>`                       | Reads a file and returns content as an array of bytes (`number[]`).                         |
+| `analyzePath`| `(path: string) => { exists: boolean, isFile?: boolean, isDir?: boolean }` | Checks if the path exists and whether it is a file or directory.                            |
+| `writeFile`  | `(path: string, data: number[]) => void`                                   | Writes raw bytes to a file (data should be an array of numbers representing bytes).         |
+| `rename`     | `(oldPath: string, newPath: string) => void`                               | Renames or moves a file or directory.                                                       |
+| `mkdir`      | `(path: string, opts?: { recursive?: boolean }) => void`                   | Creates a directory. Use `opts.recursive` to create nested directories if needed.           |
+| `unlink`     | `(path: string) => void`                                                   | Removes a file.                                                                             |
+| `rmdir`      | `(path: string) => void`                                                   | Removes a (empty) directory.                                                                |
+| `activate`   | `() => void`                                                               | Called when the FS bridge is activated (e.g., after initial mount).                         |
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Gotchas
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **readFile**: When forwarding the result from an Emscripten FS call to Quickbus, you may get a `Uint8Array`. Quickbus messages are JSON-serialized, so you should convert it to a plain `number[]` using `Array.from(...)`:
+  ```js
+  async readFile(path, opts) {
+    const buf = await this.php.readFile(path, opts); // Uint8Array
+    return Array.from(buf);
+  }
+  ```
+- **writeFile**: Quickbus / postMessage will pass `number[]` back to your handler. To write into the Emscripten FS, wrap the array in a `Uint8Array`:
+  ```js
+  writeFile(path, data) {
+    this.php.writeFile(path, new Uint8Array(data));
+  }
+  ```
 
-## Learn More
+## Building
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+This package uses Babel to compile JSX and modern JavaScript for distribution.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build
+```
 
-### Code Splitting
+The compiled files will be placed in `dist/`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## License
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT
