@@ -1,1 +1,1 @@
-export { default } from './OssCode';
+export { default } from './VSCode';
