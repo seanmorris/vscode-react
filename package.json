@@ -9,9 +9,11 @@
     "build": "babel src --out-dir dist --extensions \".js,.jsx\"",
     "prepare": "npm run build"
   },
-  "peerDependencies": {
-    "react": ">=18.0.0",
+  "dependencies": {
     "quickbus": "*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",

@@ -6,7 +6,6 @@
 
 ```bash
 npm install vscode-react
-npm install quickbus
 ```
 
 ## Usage
@@ -46,11 +45,11 @@ This hook uses [quickbus](https://github.com/seanmorris/quickbus) under the hood
 
 ### Returned values
 
-| Return         | Type                                              | Description                                  |
-| -------------- | ------------------------------------------------- | -------------------------------------------- |
-| `VSCode`       | React component                                   | The iframe-based VSCode component to render. |
-| `openFile`     | `(path: string) => void`                          | Opens the given file in the VSCode editor.   |
-| `executeCommand` | `(command: string, ...args: any[]) => void`      | Executes a VS Code command in the editor.   |
+| Return           | Type                                              | Description                                  |
+| ---------------- | ------------------------------------------------- | -------------------------------------------- |
+| `VSCode`         | React component                                   | The iframe-based VSCode component to render. |
+| `openFile`       | `(path: string) => void`                          | Opens the given file in the VSCode editor.   |
+| `executeCommand` | `(command: string, ...args: any[]) => void`       | Executes a VS Code command in the editor.    |
 
 ### Available VS Code commands
 
