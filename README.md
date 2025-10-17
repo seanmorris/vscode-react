@@ -11,7 +11,6 @@ npm install vscode-react
 ## Usage
 
 ```jsx
-import React from 'react';
 import VSCode from 'vscode-react';
 
 function App() {

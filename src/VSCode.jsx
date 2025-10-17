@@ -1,5 +1,5 @@
-import { Server } from 'quickbus';
-import { useEffect } from 'react';
+import { Client, Server } from 'quickbus';
+import { useEffect, useRef } from 'react';
 
 const defaultFsHandlers = {
   readdir(...args) {
@@ -41,18 +41,38 @@ const defaultFsHandlers = {
   },
 };
 
-export default function VSCode({className = '', url = "", fsHandlers = {}}) {
+export default function VSCode({className = '', url, fsHandlers = {}}) {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const serverRef = useRef();
+  const clientRef = useRef();
+  const iframeRef = useRef();
 
-	url = new URL(url);
-	const server = new Server(fsHandlers, url.origin);
-	const onMsg = event => server.handleMessageEvent(event);
+  const outerUrl = window.location;
+  const innerUrl = new URL(url, outerOrigin);  
+  
+  const outerOrigin = outerUrl.origin;
+  const innerOrigin = innerUrl.origin;
+  
+  const handlers = { ...defaultFsHandlers, ...fsHandlers };
 
-	useEffect(() => {
-		window.addEventListener('message', onMsg);
-		return () => window.removeEventListener('message', onMsg);
-	});
+  if (!serverRef.current) {
+    serverRef.current = new Server(handlers, innerUrl.origin);
+  }
 
-	return (
-		<iframe className={className} src = {url.href + "?origin=" + window.location.origin}></iframe>
-	);
+  if (iframeRef.current) {
+    clientRef.current = new Client(iframeRef.current, innerOrigin);
+  }
+
+  const onMsg = event => serverRef.current.handleMessageEvent(event);
+
+  useEffect(() => {
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  return (
+    <iframe className={className} ref = {iframeRef} src = {innerUrl.href + "?origin=" + outerOrigin}></iframe>
+  );
 }
