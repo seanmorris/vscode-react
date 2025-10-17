@@ -2,7 +2,7 @@
 
 > A React hook for embedding the VSCode editor via an iframe and [quickbus](https://github.com/seanmorris/quickbus).
 >
-> You can build & host your own instance of VSCode with [vscode-static-web](https://github.com/seanmorris/vscode-static-web).
+> You can build & host your own instance of VSCode with [vscode-static-web](https://github.com/seanmorris/vscode-static-web). You'll need the [file-bus](https://github.com/seanmorris/file-bus) extension added under `extra_extensions/`.
 
 ## Installation
 
