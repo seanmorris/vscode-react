@@ -1,44 +1,74 @@
 # vscode-react
 
-> A React component for embedding the VSCode editor via an iframe and Quickbus.
+> A React hook for embedding the VSCode editor via an iframe and [quickbus](https://github.com/seanmorris/quickbus).
 
 ## Installation
 
 ```bash
 npm install vscode-react
+npm install quickbus
 ```
 
 ## Usage
 
 ```jsx
-import VSCode from 'vscode-react';
+import React from 'react';
+import { useVSCode } from 'vscode-react';
 
 function App() {
   const fsHandlers = {
     // Provide your custom file system handlers here
   };
 
-  return (
-    <VSCode
-      url="http://localhost:8080"
-      fsHandlers={fsHandlers}
-    />
-  );
+  const { VSCode, openFile, executeCommand } = useVSCode({
+    url: 'https://oss-code.pages.dev',
+    fsHandlers,
+  });
+
+  // You can call openFile('/path/to/file') or executeCommand('workbench.action.files.newUntitledFile') as needed.
+
+  return <VSCode className="editor" />;
 }
 
 export default App;
 ```
 
-## API
+## Hook API
 
-| Prop       | Type   | Description                           |
-| ---------- | ------ | --------------------------------------|
-| url        | string | Base URL of the VSCode editor server. |
-| fsHandlers | object | Custom file-system handler callbacks. |
+This hook uses [quickbus](https://github.com/seanmorris/quickbus) under the hood to bridge messages between your app and the VSCode iframe.
+
+`useVSCode(options)`
+
+| Option     | Type     | Description                           |
+| ---------- | -------- | --------------------------------------|
+| url        | string   | Base URL of the VSCode editor server. |
+| fsHandlers | object   | Custom file-system handler callbacks. |
+
+### Returned values
+
+| Return         | Type                                              | Description                                  |
+| -------------- | ------------------------------------------------- | -------------------------------------------- |
+| `VSCode`       | React component                                   | The iframe-based VSCode component to render. |
+| `openFile`     | `(path: string) => void`                          | Opens the given file in the VSCode editor.   |
+
+| `executeCommand` | `(command: string, ...args: any[]) => void`      | Executes a VS Code command in the editor.     |
+
+### Available VS Code commands
+
+`executeCommand` proxies to the VS Code command registry. You can call any built-in or extension command by its identifier. For example:
+
+- `workbench.action.files.newUntitledFile`
+- `workbench.action.openFolder`
+- `workbench.action.quickOpen`
+- `workbench.action.findInFiles`
+- `editor.action.gotoLine`
+- `editor.action.rename`
+
+See the [full list of VS Code commands](https://code.visualstudio.com/api/references/commands).
 
 ## File System Handlers
 
-The `fsHandlers` prop lets you override the file-system callbacks following the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, `VSCode` uses the following stub handlers:
+The `fsHandlers` option lets you override the file-system callbacks geared toward the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, this hook uses the following stub handlers:
 
 ```js
 const defaultFsHandlers = {

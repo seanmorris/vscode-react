@@ -1,1 +1,1 @@
-export { default } from './VSCode';
+export { useVSCode } from './useVSCode';
