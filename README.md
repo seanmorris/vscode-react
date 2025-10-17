@@ -1,18 +1,18 @@
-# osscode-react
+# vscode-react
 
-> A React component for embedding the OSS Code editor via an iframe and Quickbus.
+> A React component for embedding the VSCode editor via an iframe and Quickbus.
 
 ## Installation
 
 ```bash
-npm install osscode-react
+npm install vscode-react
 ```
 
 ## Usage
 
 ```jsx
 import React from 'react';
-import OssCode from 'osscode-react';
+import VSCode from 'vscode-react';
 
 function App() {
   const fsHandlers = {
@@ -20,8 +20,8 @@ function App() {
   };
 
   return (
-    <OssCode
-      ossCodeUrl="http://localhost:8080"
+    <VSCode
+      vsCodeUrl="http://localhost:8080"
       fsHandlers={fsHandlers}
     />
   );
@@ -32,14 +32,14 @@ export default App;
 
 ## API
 
-| Prop       | Type   | Description                             |
-| ---------- | ------ | --------------------------------------- |
-| ossCodeUrl | string | Base URL of the OSS Code editor server. |
-| fsHandlers | object | Custom file-system handler callbacks.   |
+| Prop       | Type   | Description                           |
+| ---------- | ------ | --------------------------------------|
+| vsCodeUrl  | string | Base URL of the VSCode editor server. |
+| fsHandlers | object | Custom file-system handler callbacks. |
 
 ## File System Handlers
 
-The `fsHandlers` prop lets you override the file-system callbacks following the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, `OssCode` uses the following stub handlers:
+The `fsHandlers` prop lets you override the file-system callbacks following the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, `VSCode` uses the following stub handlers:
 
 ```js
 const defaultFsHandlers = {
@@ -97,4 +97,4 @@ The compiled files will be placed in `dist/`.
 
 ## License
 
-MIT
+Apache-2.0
