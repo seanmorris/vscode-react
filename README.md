@@ -69,22 +69,6 @@ const defaultFsHandlers = {
 | `rmdir`      | `(path: string) => void`                                                   | Removes a (empty) directory.                                                                |
 | `activate`   | `() => void`                                                               | Called when the FS bridge is activated (e.g., after initial mount).                         |
 
-### Gotchas
-
-- **readFile**: When forwarding the result from an Emscripten FS call to Quickbus, you may get a `Uint8Array`. Quickbus messages are JSON-serialized, so you should convert it to a plain `number[]` using `Array.from(...)`:
-  ```js
-  async readFile(path, opts) {
-    const buf = await this.php.readFile(path, opts); // Uint8Array
-    return Array.from(buf);
-  }
-  ```
-- **writeFile**: Quickbus / postMessage will pass `number[]` back to your handler. To write into the Emscripten FS, wrap the array in a `Uint8Array`:
-  ```js
-  writeFile(path, data) {
-    this.php.writeFile(path, new Uint8Array(data));
-  }
-  ```
-
 ## Building
 
 This package uses Babel to compile JSX and modern JavaScript for distribution.
