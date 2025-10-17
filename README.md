@@ -67,7 +67,7 @@ See the [full list of VS Code commands](https://code.visualstudio.com/api/refere
 
 ## File System Handlers
 
-The `fsHandlers` option lets you override the file-system callbacks geared toward the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, this hook uses the following stub handlers:
+The `fsHandlers` option lets you override the file-system callbacks. The API is geared toward interacting with the [Emscripten Filesystem API](https://emscripten.org/docs/api_reference/Filesystem-API.html). By default, this hook uses the following stub handlers:
 
 ```js
 const defaultFsHandlers = {
