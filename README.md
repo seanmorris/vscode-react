@@ -50,8 +50,7 @@ This hook uses [quickbus](https://github.com/seanmorris/quickbus) under the hood
 | -------------- | ------------------------------------------------- | -------------------------------------------- |
 | `VSCode`       | React component                                   | The iframe-based VSCode component to render. |
 | `openFile`     | `(path: string) => void`                          | Opens the given file in the VSCode editor.   |
-
-| `executeCommand` | `(command: string, ...args: any[]) => void`      | Executes a VS Code command in the editor.     |
+| `executeCommand` | `(command: string, ...args: any[]) => void`      | Executes a VS Code command in the editor.   |
 
 ### Available VS Code commands
 
