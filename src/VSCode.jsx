@@ -41,10 +41,10 @@ const defaultFsHandlers = {
   },
 };
 
-export default function VSCode({className = '', ossCodeUrl = "", fsHandlers = {}}) {
+export default function VSCode({className = '', url = "", fsHandlers = {}}) {
 
-	ossCodeUrl = new URL(ossCodeUrl);
-	const server = new Server(fsHandlers, ossCodeUrl.origin);
+	url = new URL(url);
+	const server = new Server(fsHandlers, url.origin);
 	const onMsg = event => server.handleMessageEvent(event);
 
 	useEffect(() => {
@@ -53,6 +53,6 @@ export default function VSCode({className = '', ossCodeUrl = "", fsHandlers = {}
 	});
 
 	return (
-		<iframe className={className} src = {ossCodeUrl.href + "?origin=" + window.location.origin}></iframe>
+		<iframe className={className} src = {url.href + "?origin=" + window.location.origin}></iframe>
 	);
 }

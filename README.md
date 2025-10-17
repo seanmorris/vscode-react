@@ -21,7 +21,7 @@ function App() {
 
   return (
     <VSCode
-      vsCodeUrl="http://localhost:8080"
+      url="http://localhost:8080"
       fsHandlers={fsHandlers}
     />
   );
@@ -34,7 +34,7 @@ export default App;
 
 | Prop       | Type   | Description                           |
 | ---------- | ------ | --------------------------------------|
-| vsCodeUrl  | string | Base URL of the VSCode editor server. |
+| url        | string | Base URL of the VSCode editor server. |
 | fsHandlers | object | Custom file-system handler callbacks. |
 
 ## File System Handlers
