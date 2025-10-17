@@ -68,7 +68,12 @@ export const useVSCode = ({url, fsHandlers}) => {
 	const VSCode = ({className = ''}) => {
 		if (typeof window === 'undefined') return null;
 		return (
-			<iframe className={className} ref = {iframeRef} src = {innerUrl.href + "?origin=" + outerOrigin}></iframe>
+			<iframe
+				allow="clipboard-read; clipboard-write"
+				className={className}
+				src = {innerUrl.href + "?origin=" + outerOrigin}
+				ref = {iframeRef}
+			></iframe>
 		);
 	};
 
