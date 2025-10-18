@@ -60,7 +60,7 @@ export default App;
 | url        | string   | Base URL of the VSCode editor server. |
 | fsHandlers | object   | Custom file-system handler callbacks. |
 
-### Returned values
+#### Returned values
 
 | Return           | Type                                              | Description                                  |
 | ---------------- | ------------------------------------------------- | -------------------------------------------- |
