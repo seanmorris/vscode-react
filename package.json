@@ -1,6 +1,10 @@
 {
   "name": "vscode-react",
-  "version": "0.1.6",
+  "version": "0.1.7",
+  "author": {
+    "name": "Sean Morris"
+  },
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "files": [
     "dist"
@@ -8,6 +12,10 @@
   "scripts": {
     "build": "babel src --out-dir dist --extensions \".js,.jsx\"",
     "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seanmorris/vscode-react"
   },
   "dependencies": {
     "quickbus": "*"
@@ -20,5 +28,5 @@
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/preset-react": "^7.0.0"
-  }
+  },
 }
