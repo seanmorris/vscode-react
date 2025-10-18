@@ -53,8 +53,6 @@ export default App;
 
 ## Hook API
 
-This hook uses [quickbus](https://github.com/seanmorris/quickbus) under the hood to bridge messages between your app and the VSCode iframe.
-
 `useVSCode(options)`
 
 | Option     | Type     | Description                           |
