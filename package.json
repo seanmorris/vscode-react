@@ -1,6 +1,6 @@
 {
   "name": "vscode-react",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": {
     "name": "Sean Morris"
   },
@@ -28,5 +28,5 @@
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/preset-react": "^7.0.0"
-  },
+  }
 }
