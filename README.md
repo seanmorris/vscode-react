@@ -53,7 +53,7 @@ export default App;
 
 ## Hook API
 
-`useVSCode(options)`
+### `useVSCode(options)`
 
 | Option     | Type     | Description                           |
 | ---------- | -------- | --------------------------------------|
