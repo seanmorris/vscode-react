@@ -1,6 +1,6 @@
 # vscode-react
 
-vscode-react embeds the VSCode editor right in your React application. .
+vscode-react embeds the VSCode editor right in your React application. Uses [quickbus](https://github.com/seanmorris/quickbus) for IPC & filesystem access.
 
 You can build & host your own static instance of VSCode with [vscode-static-web](https://github.com/seanmorris/vscode-static-web). You'll need the [file-bus](https://github.com/seanmorris/file-bus) extension added under `extra_extensions/`.
 
