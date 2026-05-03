@@ -5,12 +5,21 @@
     "name": "Sean Morris"
   },
   "license": "Apache-2.0",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "babel src --out-dir dist --extensions \".js,.jsx\"",
+    "build": "node ./scripts/build.mjs",
+    "test": "node --test ./tests/*.test.cjs ./tests/*.test.mjs --test-concurrency=1",
+    "test:e2e": "bash ./tests/e2e/run.sh",
     "prepare": "npm run build"
   },
   "repository": {
@@ -18,7 +27,7 @@
     "url": "https://github.com/seanmorris/vscode-react"
   },
   "dependencies": {
-    "quickbus": "*"
+    "quickbus": "^1.0.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
@@ -27,6 +36,9 @@
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
-    "@babel/preset-react": "^7.0.0"
+    "@babel/preset-react": "^7.0.0",
+    "esbuild": "^0.25.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

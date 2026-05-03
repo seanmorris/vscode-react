@@ -10,6 +10,23 @@ You can build & host your own static instance of VSCode with [vscode-static-web]
 npm install vscode-react
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
+```bash
+npm run test:e2e
+```
+
+The browser E2E test bundles a small React harness, serves it alongside a local
+`vscode-web-static` build, and verifies a real embedded VS Code workbench can
+boot, request file data over `file-bus`, open a file, and accept
+`executeCommand(...)` calls. By default it uses the companion repo at
+`/projects/vscode-web-static`, and you can override that with
+`VSCODE_REACT_COMPANION_DIR=/path/to/vscode-web-static`.
+
 > ### I am giving up my bed for one night.
 > My Sleep Out helps youth facing homelessness find safe shelter and loving care at Covenant House. That care includes essential services like education, job training, medical care, mental health and substance use counseling, and legal aid — everything they need to build independent, sustainable futures.
 >
@@ -89,7 +106,7 @@ The `fsHandlers` option lets you override the file-system callbacks. The API is 
 const defaultFsHandlers = {
   readdir(path: string, opts?: object): string[],
   async readFile(path: string, opts?: object): number[],
-  analyzePath(path: string): { exists: boolean, isFile?: boolean, isDir?: boolean },
+  analyzePath(path: string): { exists: boolean, object?: { isFolder?: boolean } },
   writeFile(path: string, data: number[]): void,
   rename(oldPath: string, newPath: string): void,
   mkdir(path: string, opts?: { recursive?: boolean }): void,
@@ -105,7 +122,7 @@ const defaultFsHandlers = {
 | ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `readdir`    | `(path: string, opts?: object) => string[]`                                | Reads a directory and returns an array of entry names.                                      |
 | `readFile`   | `(path: string, opts?: object) => Promise<number[]>`                       | Reads a file and returns content as an array of bytes (`number[]`).                         |
-| `analyzePath`| `(path: string) => { exists: boolean, isFile?: boolean, isDir?: boolean }` | Checks if the path exists and whether it is a file or directory.                            |
+| `analyzePath`| `(path: string) => { exists: boolean, object?: { isFolder?: boolean } }`   | Checks if the path exists and whether `file-bus` should treat it as a folder.              |
 | `writeFile`  | `(path: string, data: number[]) => void`                                   | Writes raw bytes to a file (data should be an array of numbers representing bytes).         |
 | `rename`     | `(oldPath: string, newPath: string) => void`                               | Renames or moves a file or directory.                                                       |
 | `mkdir`      | `(path: string, opts?: { recursive?: boolean }) => void`                   | Creates a directory. Use `opts.recursive` to create nested directories if needed.           |

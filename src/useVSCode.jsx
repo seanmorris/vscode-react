@@ -13,7 +13,10 @@ const defaultFsHandlers = {
 
 	analyzePath(...args) {
 		console.log('analyzePath', ...args);
-		return { exists: false };
+		return {
+			exists: false
+			, object: { isFolder: false }
+		};
 	},
 
 	writeFile(path, content) {
@@ -55,13 +58,18 @@ export const useVSCode = ({url, fsHandlers}) => {
 
 	useEffect(() => {
 		if (!iframeRef.current) return;
-		clientRef.current = new Client(iframeRef.current.contentWindow, innerOrigin);
+
+		clientRef.current = Client.forIframe(iframeRef.current, innerOrigin);
+
 		if (!serverRef.current) {
 			const handlers = { ...defaultFsHandlers, ...fsHandlers };
-			serverRef.current = new Server(handlers, innerUrl.origin);
+			serverRef.current = new Server(handlers, innerOrigin);
 		}
+
 		const onMsg = event => serverRef.current.handleMessageEvent(event);
+
 		window.addEventListener('message', onMsg);
+
 		return () => window.removeEventListener('message', onMsg);
 	}, []);
 
@@ -92,7 +100,7 @@ export const useVSCode = ({url, fsHandlers}) => {
 			return;
 		}
 
-		clientRef.current.executeCommand(command, args);
+		clientRef.current.executeCommand(command, ...args);
 	};
 
 	return {VSCode, openFile, executeCommand};
