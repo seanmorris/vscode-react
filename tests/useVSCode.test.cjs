@@ -23,6 +23,38 @@ const loadHookModule = () => {
 		, executeCommand(...args) {
 			clientCalls.push(['executeCommand', ...args]);
 		}
+
+		, startDebugging(...args) {
+			clientCalls.push(['startDebugging', ...args]);
+		}
+
+		, stopDebugging(...args) {
+			clientCalls.push(['stopDebugging', ...args]);
+		}
+
+		, sendDebugAdapterMessage(...args) {
+			clientCalls.push(['sendDebugAdapterMessage', ...args]);
+		}
+
+		, customRequest(...args) {
+			clientCalls.push(['customRequest', ...args]);
+		}
+
+		, listDebugSessions(...args) {
+			clientCalls.push(['listDebugSessions', ...args]);
+		}
+
+		, listBreakpoints(...args) {
+			clientCalls.push(['listBreakpoints', ...args]);
+		}
+
+		, listOpenBreakpoints(...args) {
+			clientCalls.push(['listOpenBreakpoints', ...args]);
+		}
+
+		, addBreakpoint(...args) {
+			clientCalls.push(['addBreakpoint', ...args]);
+		}
 	};
 
 	const quickbus = {
@@ -144,13 +176,28 @@ test('useVSCode wires quickbus through the iframe bridge', () => {
 			}
 		};
 
+		const dbgHandlers = {
+			acceptVSCodeMessage() {
+				return { ok: true };
+			}
+		};
+
 		const bridge = loaded.useVSCode({
 			url: 'https://inner.example/editor'
 			, fsHandlers
+			, dbgHandlers
 		});
 
 		assert.equal(typeof bridge.openFile, 'function');
 		assert.equal(typeof bridge.executeCommand, 'function');
+		assert.equal(typeof bridge.startDebugging, 'function');
+		assert.equal(typeof bridge.stopDebugging, 'function');
+		assert.equal(typeof bridge.sendDebugAdapterMessage, 'function');
+		assert.equal(typeof bridge.customRequest, 'function');
+		assert.equal(typeof bridge.listDebugSessions, 'function');
+		assert.equal(typeof bridge.listBreakpoints, 'function');
+		assert.equal(typeof bridge.listOpenBreakpoints, 'function');
+		assert.equal(typeof bridge.addBreakpoint, 'function');
 		assert.equal(typeof bridge.VSCode, 'function');
 		assert.equal(loaded.effects.length, 1);
 		assert.equal(loaded.refs.length, 3);
@@ -168,6 +215,7 @@ test('useVSCode wires quickbus through the iframe bridge', () => {
 		assert.equal(loaded.serverInstances.length, 1);
 		assert.deepEqual(loaded.serverInstances[0].origins, ['https://inner.example']);
 		assert.equal(loaded.serverInstances[0].handlers.readFile, fsHandlers.readFile);
+		assert.equal(loaded.serverInstances[0].handlers.acceptVSCodeMessage, dbgHandlers.acceptVSCodeMessage);
 		assert.equal(loaded.windowCalls.add.length, 1);
 		assert.equal(loaded.windowCalls.add[0][0], 'message');
 
@@ -179,12 +227,28 @@ test('useVSCode wires quickbus through the iframe bridge', () => {
 
 		bridge.openFile('/workspace/test.php');
 		bridge.executeCommand('workbench.action.quickOpen', 'foo', 'bar');
+		bridge.startDebugging({ type: 'dbgBus', request: 'launch', name: 'Example' }, { workspaceFolderUri: 'file:///workspace' });
+		bridge.stopDebugging('session-1');
+		bridge.sendDebugAdapterMessage('session-1', { seq: 1, type: 'request', command: 'initialize' });
+		bridge.customRequest('session-1', 'threads', { foo: 'bar' });
+		bridge.listDebugSessions();
+		bridge.listBreakpoints();
+		bridge.listOpenBreakpoints();
+		bridge.addBreakpoint('file:///workspace/test.php', 12, 3);
 
 		assert.deepEqual(
 			loaded.clientCalls.slice(1)
 			, [
 				['openFile', '/workspace/test.php']
 				, ['executeCommand', 'workbench.action.quickOpen', 'foo', 'bar']
+				, ['startDebugging', { type: 'dbgBus', request: 'launch', name: 'Example' }, { workspaceFolderUri: 'file:///workspace' }]
+				, ['stopDebugging', 'session-1']
+				, ['sendDebugAdapterMessage', 'session-1', { seq: 1, type: 'request', command: 'initialize' }]
+				, ['customRequest', 'session-1', 'threads', { foo: 'bar' }]
+				, ['listDebugSessions']
+				, ['listBreakpoints']
+				, ['listOpenBreakpoints']
+				, ['addBreakpoint', 'file:///workspace/test.php', 12, 3]
 			]
 		);
 
@@ -196,6 +260,48 @@ test('useVSCode wires quickbus through the iframe bridge', () => {
 		cleanup();
 
 		assert.deepEqual(loaded.windowCalls.remove, [['message', loaded.windowCalls.add[0][1]]]);
+	}
+	finally {
+		loaded.restore();
+	}
+});
+
+test('useVSCode provides a fallback debug adapter response when dbg handlers are omitted', () => {
+	const loaded = loadHookModule();
+
+	try {
+		const bridge = loaded.useVSCode({
+			url: 'https://inner.example/editor'
+		});
+
+		const iframe = { contentWindow: { tag: 'iframe-window' } };
+		loaded.refs[2].current = iframe;
+		loaded.effects[0]();
+
+		const response = loaded.serverInstances[0].handlers.acceptVSCodeMessage(
+			{ id: 'session-1' }
+			, { type: 'request', seq: 7, command: 'initialize' }
+		);
+
+		assert.deepEqual(
+			response
+			, {
+				type: 'response'
+				, seq: 1
+				, request_seq: 7
+				, command: 'initialize'
+				, success: false
+				, message: 'No host debug adapter configured.'
+				, body: {
+					error: {
+						id: 1
+						, format: 'No host debug adapter configured.'
+					}
+				}
+			}
+		);
+
+		assert.equal(bridge.startDebugging({ type: 'dbgBus', request: 'launch', name: 'Example' }), undefined);
 	}
 	finally {
 		loaded.restore();

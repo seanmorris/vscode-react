@@ -44,7 +44,53 @@ const defaultFsHandlers = {
 	},
 };
 
-export const useVSCode = ({url, fsHandlers}) => {
+let fallbackDebugMessageSeq = 1;
+
+const createMissingDebugAdapterResponse = message => {
+	if(!message || message.type !== 'request')
+	{
+		return;
+	}
+
+	return {
+		type: 'response'
+		, seq: fallbackDebugMessageSeq++
+		, request_seq: typeof message.seq === 'number' ? message.seq : 0
+		, command: typeof message.command === 'string' ? message.command : ''
+		, success: false
+		, message: 'No host debug adapter configured.'
+		, body: {
+			error: {
+				id: 1
+				, format: 'No host debug adapter configured.'
+			}
+		}
+	};
+};
+
+const defaultDbgHandlers = {
+	acceptVSCodeMessage(session, message) {
+		return createMissingDebugAdapterResponse(message);
+	}
+
+	, debugSessionStarted() {
+		return;
+	}
+
+	, didStartDebugSession() {
+		return;
+	}
+
+	, didTerminateDebugSession() {
+		return;
+	}
+
+	, didChangeActiveDebugSession() {
+		return;
+	}
+};
+
+export const useVSCode = ({url, fsHandlers = {}, dbgHandlers = {}}) => {
 
 	const outerUrl = window.location;
 	const outerOrigin = outerUrl.origin;
@@ -62,7 +108,12 @@ export const useVSCode = ({url, fsHandlers}) => {
 		clientRef.current = Client.forIframe(iframeRef.current, innerOrigin);
 
 		if (!serverRef.current) {
-			const handlers = { ...defaultFsHandlers, ...fsHandlers };
+			const handlers = {
+				...defaultFsHandlers
+				, ...defaultDbgHandlers
+				, ...fsHandlers
+				, ...dbgHandlers
+			};
 			serverRef.current = new Server(handlers, innerOrigin);
 		}
 
@@ -85,23 +136,66 @@ export const useVSCode = ({url, fsHandlers}) => {
 		);
 	};
 
-	const openFile = (path) => {
+	const callClient = (method, ...args) => {
 		if(!clientRef.current) {
 			console.warn('VSCode is not ready yet.');
 			return;
 		}
 
-		clientRef.current.openFile(path);
+		return clientRef.current[method](...args);
+	};
+
+	const openFile = path => {
+		return callClient('openFile', path);
 	};
 
 	const executeCommand = (command, ...args) => {
-		if(!clientRef.current) {
-			console.warn('VSCode is not ready yet.');
-			return;
-		}
-
-		clientRef.current.executeCommand(command, ...args);
+		return callClient('executeCommand', command, ...args);
 	};
 
-	return {VSCode, openFile, executeCommand};
+	const startDebugging = (configuration, options = {}) => {
+		return callClient('startDebugging', configuration, options);
+	};
+
+	const stopDebugging = sessionId => {
+		return callClient('stopDebugging', sessionId);
+	};
+
+	const sendDebugAdapterMessage = (sessionId, message) => {
+		return callClient('sendDebugAdapterMessage', sessionId, message);
+	};
+
+	const customRequest = (sessionId, command, args) => {
+		return callClient('customRequest', sessionId, command, args);
+	};
+
+	const listDebugSessions = () => {
+		return callClient('listDebugSessions');
+	};
+
+	const listBreakpoints = () => {
+		return callClient('listBreakpoints');
+	};
+
+	const listOpenBreakpoints = () => {
+		return callClient('listOpenBreakpoints');
+	};
+
+	const addBreakpoint = (uri, line, column = 1) => {
+		return callClient('addBreakpoint', uri, line, column);
+	};
+
+	return {
+		VSCode
+		, openFile
+		, executeCommand
+		, startDebugging
+		, stopDebugging
+		, sendDebugAdapterMessage
+		, customRequest
+		, listDebugSessions
+		, listBreakpoints
+		, listOpenBreakpoints
+		, addBreakpoint
+	};
 };

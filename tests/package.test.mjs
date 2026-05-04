@@ -23,12 +23,14 @@ test('package metadata exposes dual cjs and esm entrypoints', () => {
 	);
 });
 
-test('commonjs entry exports useVSCode', () => {
+test('commonjs entry exports the public API', () => {
 	const entry = require(path.join(rootDir, 'dist', 'index.js'));
 	assert.equal(typeof entry.useVSCode, 'function');
+	assert.equal(typeof entry.createDebugAdapterHost, 'function');
 });
 
-test('esm entry exports useVSCode', async() => {
+test('esm entry exports the public API', async() => {
 	const entry = await import(pathToFileURL(path.join(rootDir, 'dist', 'index.mjs')).href);
 	assert.equal(typeof entry.useVSCode, 'function');
+	assert.equal(typeof entry.createDebugAdapterHost, 'function');
 });

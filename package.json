@@ -1,6 +1,7 @@
 {
   "name": "vscode-react",
-  "version": "0.1.8",
+  "version": "0.2.0",
+  "description": "Embed a browser-hosted VS Code workbench in React and bridge it to a host page over quickbus.",
   "author": {
     "name": "Sean Morris"
   },
@@ -14,7 +15,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
@@ -26,6 +28,17 @@
     "type": "git",
     "url": "https://github.com/seanmorris/vscode-react"
   },
+  "bugs": {
+    "url": "https://github.com/seanmorris/vscode-react/issues"
+  },
+  "homepage": "https://github.com/seanmorris/vscode-react#readme",
+  "keywords": [
+    "vscode",
+    "react",
+    "iframe",
+    "editor",
+    "quickbus"
+  ],
   "dependencies": {
     "quickbus": "^1.0.0"
   },
@@ -37,6 +50,7 @@
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
+    "baseline-browser-mapping": "^2.10.27",
     "esbuild": "^0.25.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
