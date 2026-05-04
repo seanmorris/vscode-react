@@ -111,7 +111,7 @@ function App() {
     }
   });
 
-  const { VSCode, openFile, startDebugging, sendDebugAdapterMessage } = useVSCode({
+  const { VSCode, ready, openFile, startDebugging, sendDebugAdapterMessage } = useVSCode({
     url: 'https://your-vscode-host.example/editor/',
     fsHandlers,
     dbgHandlers: debugHost.dbgHandlers,
@@ -120,6 +120,7 @@ function App() {
   debugHost.attachBridge({ sendDebugAdapterMessage });
 
   async function runDebugger() {
+    await ready;
     await openFile('/workspace/demo.php');
     await startDebugging({
       type: 'dbgBus',
@@ -136,35 +137,42 @@ export default App;
 ```
 
 The `url` should point at a VS Code web host that includes `file-bus`. If you
-want debugger support as well, that host also needs `dbg-bus`. If you control
-the host with `vscode-web-static`, add the needed extensions under
-`extra_extensions/` and serve that build.
+want debugger support as well, that host also needs `dbg-bus`. The iframe host
+must post a ready message shaped like `{ kind: 'vscode-react', type: 'ready' }`
+to the parent window once its command bridge is usable. If you control the host
+with `vscode-web-static`, that handshake is emitted automatically by the shared
+bootstrap after `window.vscodeEditorReady` resolves. `ready` is intentionally a
+one-shot "first usable boot" promise; the bridge methods below will
+automatically wait for a later iframe reload to become ready again.
 
 ## Hook API
 
 ### `useVSCode(options)`
 
-| Option        | Type   | Description                                      |
-| ------------- | ------ | ------------------------------------------------ |
-| url           | string | Base URL of the VSCode editor server.            |
-| fsHandlers    | object | Custom file-system handler callbacks.            |
-| dbgHandlers   | object | Optional host-side debugger bridge callbacks.    |
+| Option           | Type   | Description                                                   |
+| ---------------- | ------ | ------------------------------------------------------------- |
+| url              | string | Base URL of the VSCode editor server.                         |
+| fsHandlers       | object | Custom file-system handler callbacks.                         |
+| dbgHandlers      | object | Optional host-side debugger bridge callbacks.                 |
+| readyTimeoutMs   | number | Optional timeout for the iframe ready handshake. Default `0` (disabled). |
 
 #### Returned values
 
 | Return                    | Type                                        | Description                                           |
 | ------------------------- | ------------------------------------------- | ----------------------------------------------------- |
 | `VSCode`                  | React component                             | The iframe-based VSCode component to render.          |
-| `openFile`                | `(path: string) => Promise<any> \| void`    | Opens the given file in the VSCode editor.            |
-| `executeCommand`          | `(command: string, ...args: any[]) => Promise<any> \| void` | Executes a VS Code command in the editor. |
-| `startDebugging`          | `(configuration: object, options?: object) => Promise<any> \| void` | Starts a `dbgBus` debug session.      |
-| `stopDebugging`           | `(sessionId?: string) => Promise<any> \| void` | Stops a `dbgBus` debug session.                 |
-| `sendDebugAdapterMessage` | `(sessionId: string, message: object) => Promise<any> \| void` | Sends one DAP message into the debug session. |
-| `customRequest`           | `(sessionId: string, command: string, args?: any) => Promise<any> \| void` | Sends a custom debug request. |
-| `listDebugSessions`       | `() => Promise<any> \| void`                | Lists active debug sessions known to `dbg-bus`.       |
-| `listBreakpoints`         | `() => Promise<any> \| void`                | Lists all VS Code breakpoints.                        |
-| `listOpenBreakpoints`     | `() => Promise<any> \| void`                | Lists breakpoints for open editors.                   |
-| `addBreakpoint`           | `(uri: string, line: number, column?: number) => Promise<any> \| void` | Adds a source breakpoint through `dbg-bus`. |
+| `ready`                   | `Promise<object>`                            | Resolves when the iframe host first signals bridge readiness. |
+| `openFile`                | `(path: string, options?: object) => Promise<any>` | Opens the given file in the VSCode editor.     |
+| `configure`               | `(options?: object) => Promise<any>`        | Configures `file-bus` host options such as file associations. |
+| `executeCommand`          | `(command: string, ...args: any[]) => Promise<any>` | Executes a VS Code command in the editor.      |
+| `startDebugging`          | `(configuration: object, options?: object) => Promise<any>` | Starts a `dbgBus` debug session.          |
+| `stopDebugging`           | `(sessionId?: string) => Promise<any>`      | Stops a `dbgBus` debug session.                       |
+| `sendDebugAdapterMessage` | `(sessionId: string, message: object) => Promise<any>` | Sends one DAP message into the debug session. |
+| `customRequest`           | `(sessionId: string, command: string, args?: any) => Promise<any>` | Sends a custom debug request. |
+| `listDebugSessions`       | `() => Promise<any>`                        | Lists active debug sessions known to `dbg-bus`.       |
+| `listBreakpoints`         | `() => Promise<any>`                        | Lists all VS Code breakpoints.                        |
+| `listOpenBreakpoints`     | `() => Promise<any>`                        | Lists breakpoints for open editors.                   |
+| `addBreakpoint`           | `(uri: string, line: number, column?: number) => Promise<any>` | Adds a source breakpoint through `dbg-bus`. |
 
 ### `createDebugAdapterHost(options)`
 

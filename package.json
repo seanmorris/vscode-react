@@ -1,6 +1,6 @@
 {
   "name": "vscode-react",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Embed a browser-hosted VS Code workbench in React and bridge it to a host page over quickbus.",
   "author": {
     "name": "Sean Morris"

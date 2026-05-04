@@ -120,6 +120,16 @@ async function main()
 		&& document.querySelector('iframe').contentWindow.document.querySelector('.monaco-workbench')
 	)`);
 
+	await waitForValue(`Boolean(
+		window.__vscodeReactE2E.calls.some(call => call[0] === 'activate')
+		&& window.__vscodeReactE2E.startupOpenResolved
+		&& document.querySelector('iframe')
+		&& document.querySelector('iframe').contentWindow
+		&& Array.from(
+			document.querySelector('iframe').contentWindow.document.querySelectorAll('.tabs-container .tab.active .label-name')
+		).some(node => node.textContent === 'hello-world.php')
+	)`);
+
 	const initialResult = await send('Runtime.evaluate', {
 		expression: `(() => {
 			const iframe = document.querySelector('iframe');
@@ -132,12 +142,29 @@ async function main()
 						&& window.__vscodeReactE2E.stopDebugging
 						&& window.__vscodeReactE2E.addBreakpoint
 						&& window.__vscodeReactE2E.listDebugSessions
+						&& window.__vscodeReactE2E.configure
 					),
 					filePath: window.__vscodeReactE2E.filePath,
 					fileUri: window.__vscodeReactE2E.fileUri,
 					fileContent: window.__vscodeReactE2E.fileContent,
+					startupOpenResolved: window.__vscodeReactE2E.startupOpenResolved,
+					startupOpenResult: window.__vscodeReactE2E.startupOpenResult,
+					startupOpenError: window.__vscodeReactE2E.startupOpenError,
+					configureError: window.__vscodeReactE2E.configureError,
 					hasWorkbench: Boolean(iframe?.contentWindow?.document?.querySelector('.monaco-workbench')),
-					hasEditorApi: Boolean(iframe?.contentWindow?.vscodeEditor?.commands)
+					hasEditorApi: Boolean(iframe?.contentWindow?.vscodeEditor?.commands),
+					tabs: Array.from(
+						iframe?.contentWindow?.document?.querySelectorAll('.tabs-container .label-name') ?? []
+					).map(node => node.textContent),
+					activeTabs: Array.from(
+						iframe?.contentWindow?.document?.querySelectorAll('.tabs-container .tab.active .label-name') ?? []
+					).map(node => node.textContent),
+					breadcrumbs: Array.from(
+						iframe?.contentWindow?.document?.querySelectorAll('.breadcrumbs-below-tabs .monaco-breadcrumb-item .label-name') ?? []
+					).map(node => node.textContent),
+					editorText: Array.from(
+						iframe?.contentWindow?.document?.querySelectorAll('.view-lines span') ?? []
+					).map(node => node.textContent).join('')
 				};
 		})()`
 		, returnByValue: true
@@ -151,24 +178,14 @@ async function main()
 	assert.equal(initial.hasWorkbench, true);
 	assert.equal(initial.hasEditorApi, true);
 	assert.equal(initial.hasDebugBridge, true);
-
-	await send('Runtime.evaluate', {
-		expression: `(() => {
-			window.__vscodeReactE2E.openFile(window.__vscodeReactE2E.filePath);
-			return true;
-		})()`
-		, returnByValue: true
-		, awaitPromise: true
-	});
-
-	await waitForValue(`Boolean(
-		window.__vscodeReactE2E.calls.some(call => call[0] === 'readFile' && call[1] === window.__vscodeReactE2E.filePath)
-		&& document.querySelector('iframe')
-		&& document.querySelector('iframe').contentWindow
-		&& Array.from(
-			document.querySelector('iframe').contentWindow.document.querySelectorAll('.tabs-container .label-name')
-		).some(node => node.textContent === 'demo.php')
-	)`);
+	assert.equal(initial.startupOpenResolved, true);
+	assert.equal(initial.startupOpenError, null);
+	assert.match(initial.startupOpenResult ?? '', /busfs:\/*preload\/test_www\/hello-world\.php$/u);
+	assert.equal(initial.tabs.includes('hello-world.php'), true);
+	assert.equal(initial.activeTabs.includes('hello-world.php'), true);
+	assert.equal(initial.activeTabs.includes('Welcome'), false);
+	assert.equal(initial.breadcrumbs.includes('hello-world.php'), true);
+	assert.match(initial.editorText, /hello-world\.php/u);
 
 	await send('Runtime.evaluate', {
 		expression: `(() => {
@@ -195,7 +212,7 @@ async function main()
 
 	assert.equal(breakpoint?.enabled, true);
 	assert.equal(breakpoint?.location?.line, 2);
-	assert.match(breakpoint?.location?.uri ?? '', /demo\.php$/u);
+	assert.match(breakpoint?.location?.uri ?? '', /hello-world\.php$/u);
 
 	await waitForValue(`Boolean(
 		window.__vscodeReactE2E.listOpenBreakpoints
@@ -270,6 +287,31 @@ async function main()
 
 	assert.deepEqual(stoppedSessions, []);
 
+	const reloadQueueResult = await send('Runtime.evaluate', {
+		expression: `window.__vscodeReactE2E.runReloadQueueCheck()`
+		, returnByValue: true
+		, awaitPromise: true
+	});
+
+	const reloadQueue = reloadQueueResult.result?.value;
+
+	assert.equal(typeof reloadQueue?.readySignalsBeforeReload, 'number');
+	assert.equal(reloadQueue.readySignalsBeforeReload >= 1, true);
+	assert.equal(reloadQueue.readySignalsAtCallStart, reloadQueue.readySignalsBeforeReload);
+	assert.equal(reloadQueue.readySignalsAtResolve > reloadQueue.readySignalsBeforeReload, true);
+	assert.equal(reloadQueue.iframeLoadsAtCallStart > reloadQueue.iframeLoadsBeforeReload, true);
+	assert.equal(reloadQueue.iframeLoadsAtResolve >= reloadQueue.iframeLoadsAtCallStart, true);
+
+	await waitForValue(`Boolean(
+		window.__vscodeReactE2E.reloadCallResolved
+		&& window.__vscodeReactE2E.reloadCallReadySignalsAtResolve > window.__vscodeReactE2E.readySignals - 1
+		&& document.querySelector('iframe')
+		&& document.querySelector('iframe').contentWindow
+		&& Array.from(
+			document.querySelector('iframe').contentWindow.document.querySelectorAll('.tabs-container .label-name')
+		).some(node => node.textContent === 'hello-world.php')
+	)`);
+
 	const finalResult = await send('Runtime.evaluate', {
 		expression: `(() => {
 			const iframe = document.querySelector('iframe');
@@ -279,6 +321,11 @@ async function main()
 				debugCommands: window.__vscodeReactE2E.debugCommands,
 				debugMessages: window.__vscodeReactE2E.debugMessages,
 				debugSessionEvents: window.__vscodeReactE2E.debugSessionEvents,
+				readySignals: window.__vscodeReactE2E.readySignals,
+				readyError: window.__vscodeReactE2E.readyError,
+				iframeLoads: window.__vscodeReactE2E.iframeLoads,
+				reloadCallResolved: window.__vscodeReactE2E.reloadCallResolved,
+				reloadCallReadySignalsAtResolve: window.__vscodeReactE2E.reloadCallReadySignalsAtResolve,
 				tabs: [...doc.querySelectorAll('.tabs-container .label-name')].map(node => node.textContent),
 				breadcrumbs: [...doc.querySelectorAll('.breadcrumbs-below-tabs .monaco-breadcrumb-item .label-name')].map(node => node.textContent),
 				editorText: [...doc.querySelectorAll('.view-lines span')].map(node => node.textContent).join(''),
@@ -291,9 +338,13 @@ async function main()
 
 	const final = finalResult.result?.value;
 
-	assert.equal(final.quickInputVisible, true);
-	assert.equal(final.tabs.includes('demo.php'), true);
-	assert.equal(final.breadcrumbs.includes('demo.php'), true);
+	assert.equal(final.tabs.includes('hello-world.php'), true);
+	assert.equal(final.breadcrumbs.includes('hello-world.php'), true);
+	assert.equal(final.readyError, null);
+	assert.equal(final.readySignals >= 2, true);
+	assert.equal(final.iframeLoads >= 1, true);
+	assert.equal(final.reloadCallResolved, true);
+	assert.equal(final.reloadCallReadySignalsAtResolve >= 2, true);
 	assert.equal(final.calls.some(call => call[0] === 'activate'), true);
 	assert.equal(final.calls.some(call => call[0] === 'analyzePath' && call[1] === initial.filePath), true);
 	assert.equal(final.calls.some(call => call[0] === 'readFile' && call[1] === initial.filePath), true);

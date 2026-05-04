@@ -1,13 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createDebugAdapterHost, useVSCode } from '../../dist/index.mjs';
 
-const filePath = '/workspace/demo.php';
+const READY_MESSAGE_KIND = 'vscode-react';
+const READY_MESSAGE_TYPE = 'ready';
+const filePath = '/preload/test_www/hello-world.php';
 const fileUri = `busfs://${filePath}`;
 const fileContent = `<?php
-echo "Hello from vscode-react";
+echo "Hello from /preload/test_www/hello-world.php";
 `;
 const fileBytes = Array.from(new TextEncoder().encode(fileContent));
+const generatedFilesAssociations = {
+	'*.module': 'php'
+	, '*.inc': 'php'
+};
 
 const state = {
 	calls: []
@@ -15,14 +21,25 @@ const state = {
 	, debugMessages: []
 	, debugSessionEvents: []
 	, ready: false
+	, readyError: null
+	, readySignals: 0
 	, bridgeAttached: false
+	, iframeLoads: 0
+	, startupOpenResolved: false
+	, startupOpenResult: null
+	, startupOpenError: null
+	, configureError: null
 	, openFile: null
+	, configure: null
 	, executeCommand: null
 	, startDebugging: null
 	, stopDebugging: null
 	, addBreakpoint: null
 	, listDebugSessions: null
 	, listOpenBreakpoints: null
+	, runReloadQueueCheck: null
+	, reloadCallResolved: false
+	, reloadCallReadySignalsAtResolve: null
 	, filePath
 	, fileUri
 	, fileContent
@@ -138,9 +155,13 @@ const debugHost = createDebugAdapterHost({
 
 function Harness()
 {
+	const openFileRef = useRef(null);
+	const configureRef = useRef(null);
+
 	const {
 		VSCode
 		, openFile
+		, configure
 		, executeCommand
 		, startDebugging
 		, stopDebugging
@@ -148,12 +169,34 @@ function Harness()
 		, addBreakpoint
 		, listDebugSessions
 		, listOpenBreakpoints
+		, ready
 	} = useVSCode({
 		url: '/editor/'
 		, fsHandlers: {
-			activate(...args) {
+			async activate(...args) {
 				record('activate', ...args);
-				return 'host-activated';
+
+				const configurePromise = configureRef.current?.({
+					filesAssociations: generatedFilesAssociations
+				}).catch(error => {
+					state.configureError = error?.message ?? String(error);
+					return null;
+				});
+
+				const startupOpenPromise = openFileRef.current?.(filePath, {
+					languageId: 'php'
+				}).then(result => {
+					state.startupOpenResolved = true;
+					state.startupOpenResult = result;
+					return result;
+				}).catch(error => {
+					state.startupOpenError = error?.message ?? String(error);
+					throw error;
+				});
+
+				await Promise.all([configurePromise, startupOpenPromise]);
+
+				return args.length ? args[0] : 'host-activated';
 			}
 
 			, async readFile(...args) {
@@ -165,12 +208,17 @@ function Harness()
 				record('readdir', ...args);
 				if(args[0] === '/')
 				{
-					return ['workspace'];
+					return ['preload'];
 				}
 
-				if(args[0] === '/workspace')
+				if(args[0] === '/preload')
 				{
-					return ['demo.php'];
+					return ['test_www'];
+				}
+
+				if(args[0] === '/preload/test_www')
+				{
+					return ['hello-world.php'];
 				}
 
 				return [];
@@ -183,7 +231,12 @@ function Harness()
 					return { exists: true, object: { isFolder: true } };
 				}
 
-				if(args[0] === '/workspace')
+				if(args[0] === '/preload')
+				{
+					return { exists: true, object: { isFolder: true } };
+				}
+
+				if(args[0] === '/preload/test_www')
 				{
 					return { exists: true, object: { isFolder: true } };
 				}
@@ -195,9 +248,35 @@ function Harness()
 
 				return { exists: false, object: { isFolder: false } };
 			}
-		}
-		, dbgHandlers: debugHost.dbgHandlers
-	});
+			}
+			, dbgHandlers: debugHost.dbgHandlers
+		});
+
+	openFileRef.current = openFile;
+	configureRef.current = configure;
+
+	useEffect(() => {
+		const onMessage = event => {
+			const iframeWindow = document.querySelector('iframe')?.contentWindow;
+			const data = event?.data;
+
+			if(
+				event?.source === iframeWindow
+				&& data
+				&& typeof data === 'object'
+				&& data.kind === READY_MESSAGE_KIND
+				&& data.type === READY_MESSAGE_TYPE
+			) {
+				state.readySignals += 1;
+			}
+		};
+
+		window.addEventListener('message', onMessage);
+
+		return () => {
+			window.removeEventListener('message', onMessage);
+		};
+	}, []);
 
 	useEffect(() => {
 		debugHost.attachBridge({
@@ -208,6 +287,7 @@ function Harness()
 		});
 
 		state.openFile = openFile;
+		state.configure = configure;
 		state.executeCommand = executeCommand;
 		state.startDebugging = startDebugging;
 		state.stopDebugging = stopDebugging;
@@ -215,9 +295,71 @@ function Harness()
 		state.listDebugSessions = listDebugSessions;
 		state.listOpenBreakpoints = listOpenBreakpoints;
 		state.bridgeAttached = true;
-		state.ready = true;
+		ready.then(
+			() => {
+				state.ready = true;
+			}
+			, error => {
+				state.readyError = error?.message ?? String(error);
+			}
+		);
+
+		const iframe = document.querySelector('iframe');
+
+		if(!iframe)
+		{
+			return;
+		}
+
+		const onLoad = () => {
+			state.iframeLoads += 1;
+		};
+
+		iframe.addEventListener('load', onLoad);
+
+		state.runReloadQueueCheck = () => {
+			const readySignalsBeforeReload = state.readySignals;
+			const iframeLoadsBeforeReload = state.iframeLoads;
+
+			return new Promise((resolve, reject) => {
+				const onReloadLoad = () => {
+					iframe.removeEventListener('load', onReloadLoad);
+
+					const readySignalsAtCallStart = state.readySignals;
+					const iframeLoadsAtCallStart = state.iframeLoads;
+					state.reloadCallResolved = false;
+					state.reloadCallReadySignalsAtResolve = null;
+
+					openFile(filePath).then(
+						result => {
+							state.reloadCallResolved = true;
+							state.reloadCallReadySignalsAtResolve = state.readySignals;
+							resolve({
+								result
+								, readySignalsBeforeReload
+								, readySignalsAtCallStart
+								, readySignalsAtResolve: state.readySignals
+								, iframeLoadsBeforeReload
+								, iframeLoadsAtCallStart
+								, iframeLoadsAtResolve: state.iframeLoads
+							});
+						}
+						, reject
+					);
+				};
+
+				iframe.addEventListener('load', onReloadLoad);
+				iframe.src = iframe.src;
+			});
+		};
+
+		return () => {
+			iframe.removeEventListener('load', onLoad);
+			state.runReloadQueueCheck = null;
+		};
 	}, [
 		openFile
+		, configure
 		, executeCommand
 		, startDebugging
 		, stopDebugging
@@ -225,6 +367,7 @@ function Harness()
 		, addBreakpoint
 		, listDebugSessions
 		, listOpenBreakpoints
+		, ready
 	]);
 
 	return React.createElement(VSCode, { className: 'editor-frame' });
