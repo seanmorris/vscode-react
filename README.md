@@ -23,8 +23,9 @@ import { createDebugAdapterHost, useVSCode } from 'vscode-react';
 
 function App() {
   const fsHandlers = {
-    readdir(path) {
-      return ['demo.php'];
+    readdir(path, options = {}) {
+      const entries = [{name: 'demo.php', isFolder: false}];
+      return options.withFileTypes ? entries : entries.map(entry => entry.name);
     },
     async readFile(path) {
       return Array.from(new TextEncoder().encode('<?php echo "Hello";'));
@@ -214,28 +215,24 @@ See the [full list of VS Code commands](https://code.visualstudio.com/api/refere
 
 The `fsHandlers` option lets you override the file-system callbacks. This API
 mirrors the [file-bus](https://github.com/seanmorris/file-bus) host-page
-contract, which is loosely modeled on filesystem-style operations. By default,
-this hook uses the following stub handlers:
+contract, which is loosely modeled on filesystem-style operations. The built-in
+handlers only log calls and return empty or missing results; provide handlers
+for the operations your host supports. Arguments and resolved results pass
+through unchanged, including optional directory-listing options.
 
-```js
-const defaultFsHandlers = {
-  readdir(path: string, opts?: object): string[],
-  async readFile(path: string, opts?: object): number[],
-  analyzePath(path: string): { exists: boolean, object?: { isFolder?: boolean } },
-  writeFile(path: string, data: number[]): void,
-  rename(oldPath: string, newPath: string): void,
-  mkdir(path: string, opts?: { recursive?: boolean }): void,
-  unlink(path: string): void,
-  rmdir(path: string): void,
-  activate(): void
-};
+The signatures below use these documentation types:
+
+```typescript
+type DirectoryOptions = {withFileTypes?: boolean};
+type DirectoryEntry = {name: string; isFolder: boolean};
+type DirectoryResult = string[] | DirectoryEntry[];
 ```
 
 ### Handler signatures
 
 | Handler      | Signature                                                                  | Description                                                                                 |
 | ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `readdir`    | `(path: string, opts?: object) => string[]`                                | Reads a directory and returns an array of entry names.                                      |
+| `readdir`    | `(path: string, options?: DirectoryOptions) => DirectoryResult \| Promise<DirectoryResult>` | Returns names or plain `{name, isFolder}` entries when requested. |
 | `readFile`   | `(path: string, opts?: object) => Promise<number[]>`                       | Reads a file and returns content as an array of bytes (`number[]`).                         |
 | `analyzePath`| `(path: string) => { exists: boolean, object?: { isFolder?: boolean } }`   | Checks if the path exists and whether `file-bus` should treat it as a folder.              |
 | `writeFile`  | `(path: string, data: number[]) => void`                                   | Writes raw bytes to a file (data should be an array of numbers representing bytes).         |
@@ -244,6 +241,30 @@ const defaultFsHandlers = {
 | `unlink`     | `(path: string) => void`                                                   | Removes a file.                                                                             |
 | `rmdir`      | `(path: string) => void`                                                   | Removes a (empty) directory.                                                                |
 | `activate`   | `() => void`                                                               | Called when the FS bridge is activated (e.g., after initial mount).                         |
+
+Handlers may return promises. File Bus awaits mutation handlers before emitting
+file-change events, so resolve them after the backing store has persisted the
+change. Mutation return values are otherwise ignored.
+
+File Bus passes `{withFileTypes: true}` for directory expansion and recursive
+file search. Returning typed entries avoids one `analyzePath` round trip per
+entry. A host that ignores the option and returns strings remains compatible;
+File Bus resolves those names using `analyzePath`. Both formats filter out `.`
+and `..`; errors propagate without retrying as a legacy listing.
+
+When adapting PHP's filesystem, forward the options instead of dropping them:
+
+```javascript
+// php is the host's PHP runtime or service-worker client.
+const fsHandlers = {
+	readdir: (path, options) => php.readdir(path, options)
+};
+```
+
+`vscode-react` 0.2.2 already supports this forwarding. The optimization requires
+the typed-listing File Bus build in the embedded VS Code host and a compatible
+filesystem implementation. PHP follows symbolic links when classifying entries
+and rejects metadata failures; other hosts choose their own link behavior.
 
 ## Debug Handlers
 
