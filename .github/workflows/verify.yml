@@ -1,0 +1,60 @@
+name: Verify package
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to use for verification.
+        required: false
+        type: string
+        default: '24'
+      upload-package:
+        description: Upload a packed npm tarball for a downstream publish job.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package artifacts
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
+
+      # The browser E2E suite (npm run test:e2e) needs a local vscode-static-web
+      # build of VS Code, so it runs before release rather than in CI.
+
+      - name: Verify npm package contents
+        run: npm pack --dry-run
+
+      - name: Pack npm package
+        if: ${{ inputs.upload-package }}
+        run: npm pack --json
+
+      - name: Upload npm package
+        if: ${{ inputs.upload-package }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: '*.tgz'
+          if-no-files-found: error
+          retention-days: 7
