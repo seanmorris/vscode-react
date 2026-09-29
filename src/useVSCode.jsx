@@ -264,11 +264,11 @@ const defaultDbgHandlers = {
 
 export const useVSCode = ({url, fsHandlers = {}, dbgHandlers = {}, readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS}) => {
 
-	const outerUrl = window.location;
-	const outerOrigin = outerUrl.origin;
+	// Server rendering has no window; effects and the iframe only run in the browser.
+	const outerOrigin = typeof window === 'undefined' ? null : window.location.origin;
 
-	const innerUrl = new URL(url, outerOrigin);
-	const innerOrigin = innerUrl.origin;
+	const innerUrl = outerOrigin === null ? null : new URL(url, outerOrigin);
+	const innerOrigin = innerUrl?.origin;
 
 	const serverRef = useRef();
 	const clientRef = useRef();
