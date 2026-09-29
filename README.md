@@ -141,7 +141,7 @@ The `url` should point at a VS Code web host that includes `file-bus`. If you
 want debugger support as well, that host also needs `dbg-bus`. The iframe host
 must post a ready message shaped like `{ kind: 'vscode-react', type: 'ready' }`
 to the parent window once its command bridge is usable. If you control the host
-with `vscode-web-static`, that handshake is emitted automatically by the shared
+with [vscode-static-web](https://github.com/seanmorris/vscode-static-web), that handshake is emitted automatically by the shared
 bootstrap after `window.vscodeEditorReady` resolves. `ready` is intentionally a
 one-shot "first usable boot" promise; the bridge methods below will
 automatically wait for a later iframe reload to become ready again.
@@ -269,7 +269,7 @@ and rejects metadata failures; other hosts choose their own link behavior.
 ## Debug Handlers
 
 The `dbgHandlers` option lets the host page provide the runtime-facing half of
-the [`dbg-bus`](https://github.com/seanmorris/vscode-static-web/tree/main/extra_extensions/dbg-bus)
+the [`dbg-bus`](https://github.com/seanmorris/dbg-bus)
 bridge. These handlers are optional until you actually start a `dbgBus`
 session.
 
@@ -328,7 +328,7 @@ npm run test:e2e
 ```
 
 The browser E2E test bundles a small React harness, serves it alongside a local
-`vscode-web-static` build, and verifies that a real embedded VS Code workbench
+`vscode-static-web` build, and verifies that a real embedded VS Code workbench
 can:
 
 - boot successfully
@@ -339,11 +339,11 @@ can:
 - start and stop a real `dbgBus` debug session end to end
 - exchange DAP events between the host page and the embedded debugger session
 
-By default it uses the companion repo at `/projects/vscode-web-static`. You can
-override that with:
+Point it at your `vscode-static-web` checkout with `VSCODE_REACT_COMPANION_DIR`;
+the script otherwise defaults to `/projects/vscode-web-static`:
 
 ```bash
-VSCODE_REACT_COMPANION_DIR=/path/to/vscode-web-static npm run test:e2e
+VSCODE_REACT_COMPANION_DIR=/path/to/vscode-static-web npm run test:e2e
 ```
 
 ## Building
