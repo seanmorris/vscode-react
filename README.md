@@ -314,7 +314,7 @@ command map normally covers:
 - `continue`
 - `disconnect`
 
-The unit tests in [tests/createDebugAdapterHost.test.mjs](/app/tests/createDebugAdapterHost.test.mjs:1)
+The unit tests in [tests/createDebugAdapterHost.test.mjs](tests/createDebugAdapterHost.test.mjs)
 exercise that exact sequence with a minimal single-thread session.
 
 ## Tests
